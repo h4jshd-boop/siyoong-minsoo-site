@@ -1058,6 +1058,12 @@ body.nav-open {
   display: none;
 }
 
+@media (min-width: 901px) {
+  .plan__desc {
+    min-height: 2.8em;
+  }
+}
+
 @media (max-width: 1180px) {
   .plans {
     grid-template-columns: repeat(2, 1fr);
