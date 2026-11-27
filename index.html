@@ -163,7 +163,7 @@
       </article>
 
       <!-- 단가표 -->
-      <div class="plans reveal">
+      <div class="plans reveal" id="dvd-plans">
         <article class="plan">
           <div class="plan__head">
             <h4 class="plan__name" data-edit="services.dvd.plans.0.name">BASIC</h4>
@@ -227,7 +227,7 @@
       </div>
       <p class="plans-note" data-edit="services.dvd.note">초상권 동의·이벤트 할인은 정가에 포함되어 있지 않으며 상담 시 별도로 안내드립니다. 출장비는 방문 지역에 따라 달라지며 촬영 전 최종 금액에 포함해 안내드립니다.</p>
 
-      <ul class="option-list plan-options reveal">
+      <ul class="option-list plan-options reveal" id="dvd-options">
         <li class="option-list__title" data-edit="services.dvd.optionsTitle">추가 옵션 · 패키지</li>
         <li class="opt" data-edit="services.dvd.options.0">연회장 스케치 촬영 +50,000원</li>
         <li class="opt" data-edit="services.dvd.options.1">2부 촬영 +150,000원</li>
@@ -262,7 +262,7 @@
             <li data-edit="services.mood.specs.1">음원 변경 · 자막 편집</li>
             <li data-edit="services.mood.specs.2">무빙포스터(영상 포스터) 제작</li>
           </ul>
-          <ul class="price-list">
+          <ul class="price-list" id="mood-products">
             <li class="price-list__item">
               <div class="price-list__head">
                 <strong class="price-list__name" data-edit="services.mood.products.0.name">시그니처 화보 식전영상</strong>
@@ -312,7 +312,7 @@
             <strong data-edit="services.snap.price" data-format="won-optional">200,000원</strong>
             <span data-edit="services.snap.priceNote">예약금 50,000원 + 잔금 150,000원</span>
           </div>
-          <ul class="option-list">
+          <ul class="option-list" id="snap-options">
             <li class="option-list__title" data-edit="services.snap.optionsTitle">추가 옵션</li>
             <li class="opt" data-edit="services.snap.options.0">SE 감성 서브폰 추가 +50,000원 (원본 300장 이상)</li>
             <li class="opt" data-edit="services.snap.options.1">폴라로이드 3장 + 연출샷 +10,000원</li>
@@ -420,7 +420,7 @@
         <span class="eyebrow" data-edit="faq.eyebrow">04 — FAQ</span>
         <h2 data-edit="faq.title">자주 묻는 질문</h2>
       </div>
-      <div class="faq__list reveal">
+      <div class="faq__list reveal" id="faq-list">
         <details class="faq__item">
           <summary data-edit="faq.items.0.q">27년 상반기 할인가는 어떻게 적용되나요?</summary>
           <p class="faq__answer" data-edit="faq.items.0.a">STANDARD는 27년 상반기 ~ 27.08 예식 10팀 한정으로 500,000원, SIGNATURE는 27년 상반기 예식에 700,000원으로 진행합니다. 팀이 마감되면 정가로 돌아가며, 예약 전 상담에서 잔여 팀을 확인해 드립니다.</p>
@@ -592,6 +592,7 @@
 </div>
 
 <script src="site-config.js"></script>
+<script src="assets/js/sheet-loader.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/edit.js"></script>
 </body>

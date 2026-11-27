@@ -1119,6 +1119,13 @@ body.nav-open {
 .video:hover img {
   transform: scale(1.04);
 }
+/* 사진 카드 (유튜브 없이 사진만 올린 포트폴리오) */
+.video--photo {
+  cursor: zoom-in;
+}
+.video--photo .video__play {
+  display: none;
+}
 .video__play {
   position: absolute;
   z-index: 2;
@@ -1256,6 +1263,21 @@ body.nav-open {
 }
 .lightbox__close:hover {
   color: #fff;
+}
+/* 사진 크게 보기 */
+.lightbox__frame--photo {
+  aspect-ratio: auto;
+  background: transparent;
+  display: grid;
+  place-items: center;
+}
+.lightbox__frame--photo img {
+  display: block;
+  max-width: 100%;
+  max-height: 82vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }
 
 /* ── 약속 스트립 ────────────────────────────────────────────────────── */

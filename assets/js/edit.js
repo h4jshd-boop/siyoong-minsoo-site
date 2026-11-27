@@ -9,6 +9,9 @@
 (function () {
   "use strict";
 
+  /* 구글 시트로 운영 중이면 이 화면 편집 대신 시트에서 고칩니다. */
+  if (window.SM_SHEET_ACTIVE) return;
+
   var STORE_KEY = "sm_site_draft_v1";
   var siteOriginal = JSON.parse(JSON.stringify(window.SITE_CONFIG || {}));
   var originalJson = JSON.stringify(siteOriginal);

@@ -48,10 +48,20 @@
     return "https://i.ytimg.com/vi/" + id + "/maxresdefault.jpg";
   }
 
+  function esc(value) {
+    return String(value === null || value === undefined ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   var SM = (window.SM = {
     getPath: getPath,
     formatWon: formatWon,
     youtubeId: youtubeId,
+    esc: esc,
   });
 
   /* ── 문구 채우기 ────────────────────────────────────────────────── */
@@ -83,17 +93,28 @@
       if (tel) el.setAttribute("href", "tel:" + tel);
     });
 
-    // 이미지 · 대체 텍스트
+    // 이미지 · 대체 텍스트 (시트 사진 주소가 잘못되면 원래 사진으로 되돌림)
     document.querySelectorAll("[data-src-map]").forEach(function (el) {
       var src = getPath(cfg(), el.getAttribute("data-src-map"));
-      if (src) {
-        if (el.tagName === "SOURCE") {
-          el.setAttribute("srcset", src);
-          el.hidden = false;
-        } else if (el.tagName === "IMG") {
-          el.setAttribute("src", src);
-          el.hidden = false;
+      if (!src) return;
+      if (el.tagName === "SOURCE") {
+        el.setAttribute("srcset", src);
+        el.hidden = false;
+      } else if (el.tagName === "IMG") {
+        if (el.getAttribute("data-fallback-src") === null) {
+          el.setAttribute("data-fallback-src", el.getAttribute("src") || "");
         }
+        el.onerror = function () {
+          var fallback = el.getAttribute("data-fallback-src");
+          el.onerror = null;
+          if (fallback && fallback !== el.getAttribute("src")) {
+            el.setAttribute("src", fallback);
+          } else {
+            el.style.visibility = "hidden";
+          }
+        };
+        el.setAttribute("src", src);
+        el.hidden = false;
       }
     });
     document.querySelectorAll("[data-alt-map]").forEach(function (el) {
@@ -186,44 +207,56 @@
     opts = opts || {};
     var path = opts.path;
     var id = youtubeId(item.url);
+    var photo = !id && item.photo ? item.photo : "";
     var card = document.createElement("div");
-    card.className = "video";
+    card.className = "video" + (photo ? " video--photo" : "");
     card.setAttribute("role", "button");
     card.setAttribute("tabindex", "0");
-    card.setAttribute("aria-label", (item.title || "영상") + " 재생");
+    card.setAttribute("aria-label", (item.title || (photo ? "사진" : "영상")) + (photo ? " 크게 보기" : " 재생"));
     if (id) card.setAttribute("data-video", id);
 
-    var thumb = id
-      ? '<img src="' + thumbUrl(id) + '" alt="' + (item.place || item.title || "영상") +
-        ' 썸네일" loading="lazy" onerror="this.onerror=null;this.src=\'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg\'">'
-      : "";
+    var thumb = "";
+    if (id) {
+      thumb =
+        '<img src="' + thumbUrl(id) + '" alt="' + esc(item.place || item.title || "영상") +
+        ' 썸네일" loading="lazy" onerror="this.onerror=null;this.src=\'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg\'">';
+    } else if (photo) {
+      thumb =
+        '<img src="' + esc(photo) + '" alt="' + esc(item.place || item.title || "사진") +
+        '" loading="lazy">';
+    }
 
     var tag = item.tag
-      ? '<span class="video__tag" data-edit="' + path + '.tag">' + item.tag + "</span>"
+      ? '<span class="video__tag">' + esc(item.tag) + "</span>"
       : "";
 
     card.innerHTML =
       thumb +
-      '<span class="video__play" aria-hidden="true"><svg viewBox="0 0 12 14"><path d="M0 0l12 7-12 7z"/></svg></span>' +
+      (id
+        ? '<span class="video__play" aria-hidden="true"><svg viewBox="0 0 12 14"><path d="M0 0l12 7-12 7z"/></svg></span>'
+        : "") +
       '<span class="video__caption">' +
       "<span>" +
-      '<h3 data-edit="' + path + '.title">' + (item.title || "") + "</h3>" +
-      '<p data-edit="' + path + '.place">' + (item.place || "") + "</p>" +
+      '<h3 data-edit="' + path + '.title">' + esc(item.title || "") + "</h3>" +
+      '<p data-edit="' + path + '.place">' + esc(item.place || "") + "</p>" +
       "</span>" +
       tag +
       "</span>";
 
-    card.addEventListener("click", function (e) {
+    function activate() {
       if (document.body.classList.contains("is-editing")) return;
+      if (id) openLightbox(id);
+      else if (photo) openPhoto(photo, item.title || "");
+    }
+
+    card.addEventListener("click", function (e) {
       if (e.target.closest && e.target.closest("input, [contenteditable]")) return;
-      if (!id) return;
-      openLightbox(id);
+      activate();
     });
     card.addEventListener("keydown", function (e) {
-      if (document.body.classList.contains("is-editing")) return;
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        if (id) openLightbox(id);
+        activate();
       }
     });
     return card;
@@ -236,7 +269,7 @@
     var p = cfg().portfolio || {};
 
     featuredWrap.innerHTML = "";
-    if (p.featured && p.featured.url) {
+    if (p.featured && (p.featured.url || p.featured.photo)) {
       featuredWrap.removeAttribute("hidden");
       featuredWrap.appendChild(videoCard(p.featured, { path: "portfolio.featured" }));
     } else {
@@ -245,13 +278,137 @@
 
     gridWrap.innerHTML = "";
     (p.items || []).forEach(function (item, i) {
-      if (!item || !item.url) return;
+      if (!item || (!item.url && !item.photo)) return;
       gridWrap.appendChild(videoCard(item, { path: "portfolio.items." + i }));
     });
   }
+
+  /* ── 구글 시트 값으로 다시 그리기 ─────────────────────────────── */
+  function optionLine(o) {
+    var name = o.name || "";
+    var promo = o.promo ? " (" + o.promo + ")" : "";
+    if (o.price === "" || o.price === null || o.price === undefined) return name + promo;
+    return name + " +" + formatWon(o.price) + promo;
+  }
+
+  function planCard(p) {
+    var el = document.createElement("article");
+    el.className = "plan" + (p.badge ? " plan--featured" : "");
+    var html = "";
+    if (p.badge) html += '<span class="plan__badge">' + esc(p.badge) + "</span>";
+    html +=
+      '<div class="plan__head">' +
+      '<h4 class="plan__name">' + esc(p.name || "") + "</h4>" +
+      '<span class="plan__sub">' + esc(p.sub || "") + "</span>" +
+      "</div>" +
+      '<div class="plan__price">' + esc(formatWon(p.price)) + "</div>" +
+      '<span class="plan__promo">' + esc(p.promo || "") + "</span>" +
+      '<p class="plan__desc">' + esc(p.desc || "") + "</p>";
+    if (p.features && p.features.length) {
+      html +=
+        '<ul class="plan__features">' +
+        p.features
+          .map(function (f) {
+            return '<li class="plan__feature">' + esc(f) + "</li>";
+          })
+          .join("") +
+        "</ul>";
+    }
+    el.innerHTML = html;
+    return el;
+  }
+
+  function renderPlans() {
+    var wrap = document.getElementById("dvd-plans");
+    var plans = getPath(cfg(), "services.dvd.plans");
+    if (!wrap || !plans || !plans.length) return;
+    if (!window.SM_SHEET_DATA || !window.SM_SHEET_DATA.plans) return;
+    wrap.innerHTML = "";
+    plans.forEach(function (p) {
+      wrap.appendChild(planCard(p));
+    });
+  }
+
+  function renderOptionList(el, items, title) {
+    if (!el || !items || !items.length) return;
+    var html = title ? '<li class="option-list__title">' + esc(title) + "</li>" : "";
+    items.forEach(function (o) {
+      html += '<li class="opt">' + esc(optionLine(o)) + "</li>";
+    });
+    el.innerHTML = html;
+  }
+
+  function renderDvdOptions() {
+    if (!window.SM_SHEET_DATA || !window.SM_SHEET_DATA.dvdOptions) return;
+    renderOptionList(
+      document.getElementById("dvd-options"),
+      window.SM_SHEET_DATA.dvdOptions,
+      getPath(cfg(), "services.dvd.optionsTitle")
+    );
+  }
+
+  function renderSnapOptions() {
+    if (!window.SM_SHEET_DATA || !window.SM_SHEET_DATA.snapOptions) return;
+    renderOptionList(
+      document.getElementById("snap-options"),
+      window.SM_SHEET_DATA.snapOptions,
+      getPath(cfg(), "services.snap.optionsTitle")
+    );
+  }
+
+  function renderMoodProducts() {
+    var el = document.getElementById("mood-products");
+    var items = getPath(cfg(), "services.mood.products");
+    if (!el || !items || !items.length) return;
+    if (!window.SM_SHEET_DATA || !window.SM_SHEET_DATA.mood) return;
+    el.innerHTML = items
+      .map(function (p) {
+        return (
+          '<li class="price-list__item">' +
+          '<div class="price-list__head">' +
+          '<strong class="price-list__name">' + esc(p.name || "") + "</strong>" +
+          '<span class="price-list__price">' + esc(formatWon(p.price)) + "</span>" +
+          "</div>" +
+          '<p class="price-list__note">' + esc(p.note || "") + "</p>" +
+          "</li>"
+        );
+      })
+      .join("");
+  }
+
+  function renderFaq() {
+    var el = document.getElementById("faq-list");
+    if (!el || !window.SM_SHEET_DATA || !window.SM_SHEET_DATA.faq) return;
+    el.innerHTML = window.SM_SHEET_DATA.faq
+      .map(function (item) {
+        return (
+          '<details class="faq__item"><summary>' +
+          esc(item.q) +
+          '</summary><p class="faq__answer">' +
+          esc(item.a) +
+          "</p></details>"
+        );
+      })
+      .join("");
+    bindFaq();
+  }
+
+  function refresh() {
+    hydrate();
+    applyAttrs();
+    renderPlans();
+    renderDvdOptions();
+    renderMoodProducts();
+    renderSnapOptions();
+    renderFaq();
+    renderPortfolio();
+    bindFaq();
+  }
+
   SM.hydrate = hydrate;
   SM.applyAttrs = applyAttrs;
   SM.renderPortfolio = renderPortfolio;
+  SM.refresh = refresh;
 
   /* ── 라이트박스 ────────────────────────────────────────────────── */
   var lightbox = document.getElementById("lightbox");
@@ -261,6 +418,7 @@
   function openLightbox(id) {
     if (!lightbox || !lightboxFrame) return;
     lastFocus = document.activeElement;
+    lightboxFrame.className = "lightbox__frame";
     lightboxFrame.innerHTML =
       '<iframe src="https://www.youtube-nocookie.com/embed/' +
       id +
@@ -272,9 +430,24 @@
   }
   SM.openLightbox = openLightbox;
 
+  /* 사진은 크게 보기로 엽니다. */
+  function openPhoto(src, caption) {
+    if (!lightbox || !lightboxFrame) return;
+    lastFocus = document.activeElement;
+    lightboxFrame.className = "lightbox__frame lightbox__frame--photo";
+    lightboxFrame.innerHTML =
+      '<img src="' + esc(src) + '" alt="' + esc(caption || "사진") + '">';
+    lightbox.classList.add("is-open");
+    document.body.style.overflow = "hidden";
+    var closeBtn = document.getElementById("lightbox-close");
+    if (closeBtn) closeBtn.focus();
+  }
+  SM.openPhoto = openPhoto;
+
   function closeLightbox() {
     if (!lightbox || !lightbox.classList.contains("is-open")) return;
     lightbox.classList.remove("is-open");
+    lightboxFrame.className = "lightbox__frame";
     lightboxFrame.innerHTML = "";
     document.body.style.overflow = "";
     if (lastFocus && lastFocus.focus) lastFocus.focus();
@@ -372,11 +545,16 @@
     }
 
     // FAQ 한 번에 하나만 열기
-    var faqItems = document.querySelectorAll(".faq__item");
-    faqItems.forEach(function (item) {
+    bindFaq();
+  }
+
+  function bindFaq() {
+    document.querySelectorAll(".faq__item").forEach(function (item) {
+      if (item.getAttribute("data-faq-bound") === "1") return;
+      item.setAttribute("data-faq-bound", "1");
       item.addEventListener("toggle", function () {
         if (!item.open) return;
-        faqItems.forEach(function (other) {
+        document.querySelectorAll(".faq__item").forEach(function (other) {
           if (other !== item) other.open = false;
         });
       });
@@ -385,9 +563,7 @@
 
   /* ── 시작 ──────────────────────────────────────────────────────── */
   function init() {
-    hydrate();
-    applyAttrs();
-    renderPortfolio();
+    refresh();
     bind();
   }
 
