@@ -83,7 +83,8 @@
         "/gviz/tq?tqx=out:json;responseHandler:" +
         cbName +
         "&sheet=" +
-        encodeURIComponent(name);
+        encodeURIComponent(name) +
+        "&headers=1";
       document.head.appendChild(script);
     });
   }
